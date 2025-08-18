@@ -1,0 +1,29 @@
+[package]
+name = "iis2dulpx-rs"
+version = "1.0.0"
+edition = "2024"
+rust-version = "1.87.0"
+readme = "README.md"
+license = "BSD-3-Clause"
+categories = ["embedded", "no-std"]
+keywords = ["st", "mems", "accelerometer", "mlc", "fsm"]
+repository = "https://github.com/STMicroelectronics/iis2dulpx-rs"
+description = """
+    Driver for the IIS2DULPX ultra-low-power 3-axis accelerometer with FSM, MLC,
+    adaptive self-configuration, analog hub/Qvar, FIFO, and advanced motion detection.
+"""
+
+[dependencies]
+bitfield-struct = "0.11.0"
+embedded-hal = "1.0.0"
+st-mem-bank-macro = "1.0.0"
+st-mems-bus = "1.0.0"
+
+[dependencies.derive_more]
+version = "2.0.1"
+features = ["try_from"]
+default-features = false
+
+[features]
+bit_order_msb = []
+default = []
