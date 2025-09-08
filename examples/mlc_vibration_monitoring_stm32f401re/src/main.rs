@@ -22,7 +22,7 @@ use stm32f4xx_hal::{
 };
 
 mod mlc_config;
-use mlc_config::ACTIVITY_REC_FOR_MOBILE;
+use mlc_config::VIBRATION;
 use st_mems_reg_config_conv::ucf_entry::MemsUcfOp;
 
 static INT_PIN: Mutex<RefCell<Option<gpio::PA4<Input>>>> = Mutex::new(RefCell::new(None));
@@ -30,22 +30,18 @@ static MEMS_EVENT: Mutex<RefCell<bool>> = Mutex::new(RefCell::new(false));
 
 #[repr(u8)]
 enum CatchedEvent {
-    Stationary,
-    Walking,
-    Jogging,
-    Biking,
-    Driving,
+    NoVibration,
+    LowVibration,
+    HighVibration,
     Unknown(u8),
 }
 
 impl From<u8> for CatchedEvent {
     fn from(value: u8) -> Self {
         match value {
-            0 => Self::Stationary,
-            1 => Self::Walking,
-            4 => Self::Jogging,
-            8 => Self::Biking,
-            12 => Self::Driving,
+            0 => Self::NoVibration,
+            1 => Self::LowVibration,
+            2 => Self::HighVibration,
             other => Self::Unknown(other),
         }
     }
@@ -54,11 +50,9 @@ impl From<u8> for CatchedEvent {
 impl Display for CatchedEvent {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            CatchedEvent::Stationary => write!(f, "Stationary event"),
-            CatchedEvent::Walking => write!(f, "Walking event"),
-            CatchedEvent::Jogging => write!(f, "Jogging event"),
-            CatchedEvent::Biking => write!(f, "Biking event"),
-            CatchedEvent::Driving => write!(f, "Driving event"),
+            CatchedEvent::NoVibration => write!(f, "No vibration event"),
+            CatchedEvent::LowVibration => write!(f, "Low vibration event"),
+            CatchedEvent::HighVibration => write!(f, "High vibration event"),
             CatchedEvent::Unknown(v) => write!(f, "Unkown event: {v}"),
         }
     }
@@ -144,7 +138,7 @@ fn main() -> ! {
     }
 
     // Start Matchine Learning Core configuration
-    for ufc_line in ACTIVITY_REC_FOR_MOBILE {
+    for ufc_line in VIBRATION {
         match ufc_line.op {
             MemsUcfOp::Delay => sensor.tim.delay_ms(ufc_line.data.into()),
             MemsUcfOp::Write => sensor
@@ -166,6 +160,7 @@ fn main() -> ! {
         if !mems_event {
             continue;
         }
+
         let status = sensor.mlc_status_get().unwrap();
         if status.is_mlc1() == 1 {
             let catched: CatchedEvent = sensor.mlc_out_get().unwrap()[0].into();

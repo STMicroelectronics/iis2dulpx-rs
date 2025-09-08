@@ -17,10 +17,11 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 fn main() {
-    // Parse ucf file
-    let input_file = Path::new("iis2dulpx_four_d.ucf");
+    // Source file:
+    // https://github.com/STMicroelectronics/st-mems-finite-state-machine/blob/main/examples/fourd_orientation_detection/iis2dulpx/iis2dulpx_fourd_orientation.json
+    let input_file = Path::new("iis2dulpx_fourd_orientation.json");
     let output_file = Path::new("src/fsm_config.rs");
-    parser::generate_rs_from_ucf(input_file, output_file, "FOUR_D");
+    parser::generate_rs_from_json(input_file, output_file, "FOUR_D", "IIS2DULPX", false);
 
     // Put `memory.x` in our output directory and ensure it's
     // on the linker search path.
@@ -36,7 +37,7 @@ fn main() {
     // here, we ensure the build script is only re-run when
     // `memory.x` is changed.
     println!("cargo:rerun-if-changed=memory.x");
-    println!("cargo:rerun-if-changed=iis2dulpx_four_d.ucf");
+    println!("cargo:rerun-if-changed=iis2dulpx_fourd_orientation.json");
 
     // Specify linker arguments.
 

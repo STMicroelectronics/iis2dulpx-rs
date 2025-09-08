@@ -17,10 +17,11 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 fn main() {
-    // Parse ucf file
-    let input_file = Path::new("iis2dulpx_activity_recognition_for_mobile.ucf");
+    // Source file:
+    // https://github.com/STMicroelectronics/st-mems-machine-learning-core/blob/main/examples/vibration_monitoring/iis2dulpx/iis2dulpx_vibration_monitoring.json
+    let input_file = Path::new("iis2dulpx_vibration_monitoring.json");
     let output_file = Path::new("src/mlc_config.rs");
-    parser::generate_rs_from_ucf(&input_file, &output_file, "ACTIVITY_REC_FOR_MOBILE");
+    parser::generate_rs_from_json(&input_file, &output_file, "VIBRATION", "IIS2DULPX", false);
 
     // Put `memory.x` in our output directory and ensure it's
     // on the linker search path.
@@ -36,7 +37,7 @@ fn main() {
     // here, we ensure the build script is only re-run when
     // `memory.x` is changed.
     println!("cargo:rerun-if-changed=memory.x");
-    println!("cargo:rerun-if-changed=iis2dulpx_activity_recognition_for_mobile.ucf");
+    println!("cargo:rerun-if-changed=iis2dulpx_vibration_monitoring.json");
 
     // Specify linker arguments.
 
