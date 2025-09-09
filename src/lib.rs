@@ -1634,12 +1634,11 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T> {
     /// # Description
     ///
     /// This function configures the FIFO mode by setting various parameters such as operation mode,
-    /// storage depth, watermark, and batching information. It modifies the `Ctrl4`, `FifoCtrl`,
-    /// `FifoBatchDec`, and `FifoWtm` registers to apply the settings.
+    /// storage depth, accelerometer only and batch in FIFO. It modifies the `Ctrl4`, `FifoCtrl`,
+    /// and `FifoWtm` registers to apply the settings.
     pub fn fifo_mode_set(&mut self, val: &FifoMode) -> Result<(), Error<B::Error>> {
         let mut ctrl4 = Ctrl4::read(self)?;
         let mut fifo_ctrl = FifoCtrl::read(self)?;
-        let mut fifo_batch = FifoBatchDec::read(self)?;
         let mut fifo_wtm = FifoWtm::read(self)?;
 
         // Set FIFO mode
@@ -1656,23 +1655,8 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T> {
         // Set xl_only_fifo
         fifo_wtm.set_xl_only_fifo(val.xl_only);
 
-        // Set batching info
-        fifo_batch.set_dec_ts_batch(val.batch.dec_ts as u8);
-        fifo_batch.set_bdr_xl(val.batch.bdr_xl as u8);
-
         fifo_ctrl.set_cfg_chg_en(val.cfg_change_in_fifo);
 
-        // Set watermark
-        if val.watermark > 0 {
-            fifo_ctrl.set_stop_on_fth(if val.fifo_event == FifoEvent::Wtm {
-                1
-            } else {
-                0
-            });
-            fifo_wtm.set_fth(val.watermark);
-        }
-
-        fifo_batch.write(self)?;
         fifo_wtm.write(self)?;
         fifo_ctrl.write(self)?;
         ctrl4.write(self)
@@ -1694,7 +1678,6 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T> {
     pub fn fifo_mode_get(&mut self) -> Result<FifoMode, Error<B::Error>> {
         let ctrl4 = Ctrl4::read(self)?;
         let fifo_ctrl = FifoCtrl::read(self)?;
-        let fifo_batch = FifoBatchDec::read(self)?;
         let fifo_wtm = FifoWtm::read(self)?;
 
         // Get FIFO mode
@@ -1706,20 +1689,169 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T> {
 
         let store = fifo_ctrl.fifo_depth().try_into().unwrap_or_default();
 
-        let batch = Batch {
-            dec_ts: fifo_batch.dec_ts_batch().try_into().unwrap_or_default(),
-            bdr_xl: fifo_batch.bdr_xl().try_into().unwrap_or_default(),
-        };
-
         Ok(FifoMode {
             operation,
             store,
             xl_only: fifo_wtm.xl_only_fifo(),
-            watermark: fifo_wtm.fth(),
             cfg_change_in_fifo: fifo_ctrl.cfg_chg_en(),
-            fifo_event: FifoEvent::Wtm, // assumed
-            batch,
         })
+    }
+
+    /// Sets the FIFO watermark level.
+    ///
+    /// The FIFO watermark is a programmable threshold that determines when a FIFO threshold interrupt is generated.
+    /// When the number of unread samples in the FIFO buffer reaches or exceeds this level, the device can trigger an interrupt
+    /// (if enabled via the INT1_FIFO_TH or INT2_FIFO_TH bits in CTRL2/CTRL3).
+    ///
+    /// Registers used:
+    /// - Writes to the `FIFO_WTM` (0x16) register, FTH[6:0] field. (See datasheet Table 44, Section 8.11)
+    ///
+    /// # Parameters
+    /// - `val`: Watermark threshold value (0..=127). Each unit corresponds to one FIFO sample (1 sample = 7 bytes: 1 TAG + 6 DATA).
+    ///
+    /// # Returns
+    /// - `Ok(())` on success.
+    /// - `Err`: If the value is out of range or a bus error occurs.
+    ///
+    /// # Panics
+    /// - Panics if `val >= 128` (assertion).
+    ///
+    /// # Example
+    /// ```rust
+    /// sensor.fifo_watermark_set(32)?;
+    /// ```
+    pub fn fifo_watermark_set(&mut self, val: u8) -> Result<(), Error<B::Error>> {
+        assert!(val < 128);
+
+        let mut fifo_wtm = FifoWtm::read(self)?;
+        fifo_wtm.set_fth(val);
+        fifo_wtm.write(self)
+    }
+
+    /// Retrieves the current FIFO watermark threshold value.
+    ///
+    /// This function reads the FIFO_WTM register and returns the current watermark threshold (FTH[6:0]).
+    /// The watermark determines when the FIFO threshold interrupt is triggered (if enabled).
+    ///
+    /// Registers used:
+    /// - Reads from the `FIFO_WTM` (0x16) register, FTH[6:0] field. (See datasheet Table 44, Section 8.11)
+    ///
+    /// # Returns
+    /// - `Ok(u8)`: The current FIFO watermark threshold (0..=127).
+    /// - `Err`: If a bus or register access error occurs.
+    ///
+    /// # Example
+    /// ```rust
+    /// let wtm = sensor.fifo_watermark_get()?;
+    /// ```
+    pub fn fifo_watermark_get(&mut self) -> Result<u8, Error<B::Error>> {
+        FifoWtm::read(self).map(|reg| reg.fth())
+    }
+
+    /// Configures FIFO batching for timestamp and accelerometer data.
+    ///
+    /// This function sets the decimation rate for timestamp batching and the batch data rate (BDR) for accelerometer data
+    /// in the FIFO. Batching allows the device to store data at a reduced rate, optimizing memory usage and power consumption.
+    ///
+    /// Registers used:
+    /// - Writes to the `FIFO_BATCH_DEC` (0x47) register:
+    ///   - DEC_TS_BATCH[1:0]: Timestamp decimation (see Table 117)
+    ///   - BDR_XL[2:0]: Accelerometer batch data rate (see Table 118)
+    ///
+    /// # Parameters
+    /// - `val`: Reference to a `Batch` struct containing the desired decimation and batch data rate settings.
+    ///
+    /// # Returns
+    /// - `Ok(())` on success.
+    /// - `Err`: If a bus or register access error occurs.
+    ///
+    /// # Example
+    /// ```rust
+    /// let batch = Batch { dec_ts: 1, bdr_xl: 2 };
+    /// sensor.fifo_batch_set(&batch)?;
+    /// ```
+    pub fn fifo_batch_set(&mut self, val: &Batch) -> Result<(), Error<B::Error>> {
+        let mut fifo_batch = FifoBatchDec::read(self)?;
+
+        // Set batching info
+        fifo_batch.set_dec_ts_batch(val.dec_ts as u8);
+        fifo_batch.set_bdr_xl(val.bdr_xl as u8);
+
+        fifo_batch.write(self)
+    }
+
+    /// Reads the current FIFO batching configuration.
+    ///
+    /// This function retrieves the current decimation rate for timestamp batching and the batch data rate (BDR)
+    /// for accelerometer data from the FIFO_BATCH_DEC register.
+    ///
+    /// Registers used:
+    /// - Reads from the `FIFO_BATCH_DEC` (0x47) register:
+    ///   - DEC_TS_BATCH[1:0]: Timestamp decimation
+    ///   - BDR_XL[2:0]: Accelerometer batch data rate
+    ///
+    /// # Returns
+    /// - `Ok(Batch)`: Struct containing the current batching configuration.
+    /// - `Err`: If a bus or register access error occurs.
+    ///
+    /// # Example
+    /// ```rust
+    /// let batch = sensor.fifo_batch_get()?;
+    /// ```
+    pub fn fifo_batch_get(&mut self) -> Result<Batch, Error<B::Error>> {
+        let reg = FifoBatchDec::read(self)?;
+        Ok(Batch {
+            dec_ts: reg.dec_ts_batch().try_into().unwrap_or_default(),
+            bdr_xl: reg.bdr_xl().try_into().unwrap_or_default(),
+        })
+    }
+
+    /// Enables or disables the FIFO stop-on-watermark feature.
+    ///
+    /// When enabled, the FIFO buffer stops collecting new data once the number of unread samples reaches the watermark threshold.
+    /// This is useful for applications that require precise control over the number of samples collected in the FIFO.
+    /// When disabled, the FIFO continues to collect data, potentially overwriting the oldest samples (depending on FIFO mode).
+    ///
+    /// Registers used:
+    /// - Writes to the `FIFO_CTRL` (0x15) register, STOP_ON_FTH bit (bit 4) (See datasheet Table 41, Section 8.10)
+    ///
+    /// # Parameters
+    /// - `fth`: `FifoEvent` enum value indicating whether to enable or disable the stop-on-watermark feature.
+    ///
+    /// # Returns
+    /// - `Ok(())` on success.
+    /// - `Err`: If a bus or register access error occurs.
+    ///
+    /// # Example
+    /// ```rust
+    /// sensor.fifo_stop_on_wtm_set(FifoEvent::Enable)?;
+    /// ```
+    pub fn fifo_stop_on_wtm_set(&mut self, fth: FifoEvent) -> Result<(), Error<B::Error>> {
+        let mut fifo_ctrl = FifoCtrl::read(self)?;
+        fifo_ctrl.set_stop_on_fth(fth as u8);
+        fifo_ctrl.write(self)
+    }
+
+    /// Reads the current status of the FIFO stop-on-watermark feature.
+    ///
+    /// This function checks whether the FIFO is configured to stop collecting data when the watermark threshold is reached.
+    /// Returns the current setting as a `FifoEvent` enum.
+    ///
+    /// Registers used:
+    /// - Reads from the `FIFO_CTRL` (0x15) register, STOP_ON_FTH bit (bit 4) (See datasheet Table 41, Section 8.10)
+    ///
+    /// # Returns
+    /// - `Ok(FifoEvent)`: Current stop-on-watermark configuration.
+    /// - `Err`: If a bus or register access error occurs.
+    ///
+    /// # Example
+    /// ```rust
+    /// let stop_on_wtm = sensor.fifo_stop_on_wtm_get()?;
+    /// ```
+    pub fn fifo_stop_on_wtm_get(&mut self) -> Result<FifoEvent, Error<B::Error>> {
+        let ctrl = FifoCtrl::read(self)?;
+        let evt = FifoEvent::try_from(ctrl.stop_on_fth()).unwrap_or_default();
+        Ok(evt)
     }
 
     /// Retrieves the number of unread sensor data entries stored in the FIFO.

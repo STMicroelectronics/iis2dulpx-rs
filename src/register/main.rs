@@ -2219,10 +2219,7 @@ pub struct FifoMode {
     pub operation: FifoOperation,
     pub store: Store,
     pub xl_only: u8,
-    pub watermark: u8,
     pub cfg_change_in_fifo: u8,
-    pub fifo_event: FifoEvent,
-    pub batch: Batch,
 }
 
 /// Represents batching information for the FIFO.
@@ -2793,7 +2790,8 @@ pub enum BdrXl {
 ///
 /// This enum is used to specify the FIFO event type, allowing for watermark or full event configurations.
 #[repr(u8)]
-#[derive(Clone, Copy, PartialEq, Default)]
+#[derive(Clone, Copy, PartialEq, Default, TryFrom)]
+#[try_from(repr)]
 pub enum FifoEvent {
     #[default]
     Wtm = 0x0,
