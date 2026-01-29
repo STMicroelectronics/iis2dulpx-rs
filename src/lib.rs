@@ -19,7 +19,7 @@ pub mod register;
 /// The bus is generalized over the BusOperation trait, allowing the use
 /// of I2C or SPI protocols; this also allows the user to implement sharing
 /// techniques to share the underlying bus.
-pub struct Iis2dulpx<B, T> {
+pub struct Iis2dulpx<B: BusOperation, T: DelayNs> {
     pub bus: B,
     pub tim: T,
     pub func_cfg_access_main: FuncCfgAccess,
@@ -38,13 +38,13 @@ pub enum Error<B> {
     FailedToSetMembank(MemBank),
 }
 
-impl<P, T> Iis2dulpx<P, T>
+impl<B, T> Iis2dulpx<B, T>
 where
-    P: I2c,
+    B: BusOperation,
     T: DelayNs,
 {
     /// Constructor method using a generic Bus that implements BusOperation
-    pub fn from_bus(bus: P, tim: T) -> Self {
+    pub fn from_bus(bus: B, tim: T) -> Self {
         Self {
             bus,
             tim,
