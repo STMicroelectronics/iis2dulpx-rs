@@ -134,6 +134,19 @@ pub enum Reg {
     Timestamp3 = 0x7D,
 }
 
+/// Who Am I (R).
+///
+/// This register is a read-only register. Its value is fixed at 47h.
+/// Return the id of the device.
+#[register(address = Reg::WhoAmI, access_type = Iis2dulpx, generics = 2)]
+#[cfg_attr(feature = "bit_order_msb", bitfield(u8, order = Msb))]
+#[cfg_attr(not(feature = "bit_order_msb"), bitfield(u8, order = Lsb))]
+pub struct WhoAmI {
+    /// Id.
+    #[bits(8, default = 0x47, access = RO)]
+    pub id: u8,
+}
+
 /// External Clock Configuration Register (R/W).
 ///
 /// The `EXT_CLK_CFG` register is used to configure the external clock settings. It allows the external clock to replace the internal oscillator when enabled.

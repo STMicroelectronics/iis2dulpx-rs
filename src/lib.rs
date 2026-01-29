@@ -323,9 +323,7 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T> {
     /// method to fetch the ID and returns it as a `u8` value. If the read operation encounters any issues,
     /// it returns an error encapsulated in the `Error` enum.
     pub fn device_id_get(&mut self) -> Result<u8, Error<B::Error>> {
-        let mut arr: [u8; 1] = [0];
-        self.read_from_register(Reg::WhoAmI as u8, &mut arr)?;
-        Ok(arr[0])
+        WhoAmI::read(self).map(|reg| reg.id())
     }
 
     /// Perform device reboot (boot time: 25 ms)
