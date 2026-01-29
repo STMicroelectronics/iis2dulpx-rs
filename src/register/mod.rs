@@ -1,4 +1,4 @@
-use crate::{BusOperation, Error, Iis2dulpx, MemBankFunctions};
+use crate::{BusOperation, Error, MemBankFunctions, Iis2dulpx};
 use derive_more::TryFrom;
 use embedded_hal::delay::DelayNs;
 use st_mem_bank_macro::mem_bank;

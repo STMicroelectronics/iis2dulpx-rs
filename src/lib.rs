@@ -22,7 +22,7 @@ pub mod register;
 pub struct Iis2dulpx<B: BusOperation, T: DelayNs> {
     pub bus: B,
     pub tim: T,
-    pub func_cfg_access_main: FuncCfgAccess,
+    pub func_cfg_access_main: FuncCfgAccess
 }
 
 /// Driver errors.
@@ -45,11 +45,7 @@ where
 {
     /// Constructor method using a generic Bus that implements BusOperation
     pub fn from_bus(bus: B, tim: T) -> Self {
-        Self {
-            bus,
-            tim,
-            func_cfg_access_main: FuncCfgAccess::new(),
-        }
+        Self { bus, tim, func_cfg_access_main: FuncCfgAccess::new() }
     }
 }
 
@@ -62,11 +58,7 @@ where
     pub fn new_i2c(i2c: P, address: I2CAddress, tim: T) -> Self {
         // Initialize the I2C bus with the Iis2dulpx address
         let bus = st_mems_bus::i2c::I2cBus::new(i2c, address as SevenBitAddress);
-        Self {
-            bus,
-            tim,
-            func_cfg_access_main: FuncCfgAccess::new(),
-        }
+        Self { bus, tim, func_cfg_access_main: FuncCfgAccess::new() }
     }
 }
 
@@ -79,11 +71,7 @@ where
     pub fn new_spi(spi: P, tim: T) -> Self {
         // Initialize the SPI bus
         let bus = st_mems_bus::spi::SpiBus::new(spi);
-        Self {
-            bus,
-            tim,
-            func_cfg_access_main: FuncCfgAccess::new(),
-        }
+        Self { bus, tim, func_cfg_access_main: FuncCfgAccess::new() }
     }
 }
 
@@ -145,8 +133,7 @@ where
             self.func_cfg_access_main
         };
 
-        let val = self
-            .func_cfg_access_main
+        let val = self.func_cfg_access_main
             .emb_func_reg_access()
             .try_into()
             .unwrap_or_default();
@@ -658,6 +645,7 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T> {
         Ok(Md { odr, fs, bw })
     }
 
+    
     /// Disable/Enable temperature (or AH_QVAR) sensor acquisition.
     ///
     /// # Arguments
@@ -683,6 +671,7 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T> {
         st.write(self)
     }
 
+    
     /// Disable/Enable temperature (or AH_QVAR) sensor acquisition.
     ///
     /// # Returns
@@ -701,6 +690,10 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T> {
     pub fn t_ah_qvar_dis_get(&mut self) -> Result<u8, Error<B::Error>> {
         Ok(SelfTest::read(self)?.t_ah_qvar_dis())
     }
+
+    
+
+    
 
     /// Enter deep power down.
     ///
@@ -724,6 +717,7 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T> {
         sleep.write(self)
     }
 
+    
     /// Enter soft power down in SPI case.
     ///
     /// # Returns
@@ -744,6 +738,8 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T> {
         self.tim.delay_ms(25); // See AN5812 - paragraphs 3.1.1.1 and 3.1.1.2
         Ok(())
     }
+
+    
 
     /// Disable hard-reset from CS.
     ///
@@ -920,6 +916,7 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T> {
         Ok(XlData { raw, mg })
     }
 
+    
     /// Retrieves OUTT data.
     ///
     /// # Returns
@@ -945,6 +942,9 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T> {
         })
     }
 
+    
+
+    
     /// Retrieves AH_QVAR data.
     ///
     /// # Returns
@@ -1207,7 +1207,7 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T> {
             int2_pull_down: !pin_ctrl.pd_dis_int2() & 0x01,
             sda_pull_up: pin_ctrl.sda_pu_en() & 0x01,
             sdo_pull_up: pin_ctrl.sdo_pu_en() & 0x01,
-            int1_int2_push_pull: !pin_ctrl.pp_od() & 0x01,
+            int1_int2_push_pull: !pin_ctrl.pp_od()& 0x01,
         };
         Ok(pin_conf)
     }
@@ -1964,6 +1964,7 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T> {
         Ok(buff)
     }
 
+    
     /// Retrieves and processes FIFO data based on the sensor and FIFO mode configurations.
     ///
     /// # Arguments
@@ -2072,6 +2073,9 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T> {
         Ok(data)
     }
 
+    
+
+    
     /// Enables and configures the AH_QVAR chain.
     ///
     /// # Arguments
@@ -2102,6 +2106,7 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T> {
         ah_qvar_cfg.write(self)
     }
 
+    
     /// Retrieves the current configuration of the AH_QVAR chain.
     ///
     /// # Returns
@@ -3529,6 +3534,7 @@ pub fn from_fs16g_to_mg(lsb: i16) -> f32 {
 pub fn from_lsb_to_celsius(lsb: i16) -> f32 {
     (lsb as f32 / 355.5) + 25.0
 }
+
 
 /// Converts raw AH_QVAR data from LSB to millivolts.
 ///

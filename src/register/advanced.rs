@@ -3,6 +3,7 @@ use bitfield_struct::bitfield;
 use st_mem_bank_macro::adv_register;
 use st_mems_bus::EmbAdvFunctions;
 
+
 /// Represents the register addresses for embedded advanced features page 0.
 ///
 /// These registers are accessible when `PAGE_SEL[3:0]` are set to `0000` in the `PAGE_SEL` register.
@@ -39,6 +40,8 @@ pub enum EmbAdvReg {
     /// Address for the `SMART_POWER_CTRL` register (R/W).
     SmartPowerCtrl = 0xD2,
 }
+
+
 
 /// FSM long counter timeout low register (R/W).
 ///
@@ -159,6 +162,7 @@ pub struct PedoScDeltat {
     pub pd_sc: u16,
 }
 
+
 /// Temperature / analog hub / Qvar sensor sensitivity low register (R/W).
 ///
 /// The `T_AH_QVAR_SENSITIVITY_L` register holds the least significant byte of the sensitivity value for the temperature, analog hub, or Qvar sensor.
@@ -175,6 +179,8 @@ pub struct TAhQvarSensitivity {
     #[bits(16, default = 0b1101000100011001)]
     pub t_ah_qvar_s: u16,
 }
+
+
 
 /// Smart power management configuration register (R/W).
 ///

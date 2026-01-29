@@ -1,7 +1,8 @@
-use crate::{BusOperation, DelayNs, Error, Iis2dulpx, PROPERTY_ENABLE};
+use crate::{BusOperation, DelayNs, Error, PROPERTY_ENABLE, Iis2dulpx};
 use bitfield_struct::bitfield;
 use derive_more::TryFrom;
 use st_mem_bank_macro::register;
+
 
 /// Represents the register addresses of the device.
 ///
@@ -133,6 +134,8 @@ pub enum Reg {
     /// Address for the `TIMESTAMP3` register (R).
     Timestamp3 = 0x7D,
 }
+
+
 
 /// Who Am I (R).
 ///
@@ -1182,6 +1185,7 @@ pub struct OutZ {
     pub outz: u16,
 }
 
+
 /// Temperature/AH/Qvar Output Low Register (R).
 ///
 /// The `OUT_T_AH_QVAR_L` and  `OUT_T_AH_QVAR_H` registers provides the bits of the temperature/AH/Qvar data output.
@@ -1197,6 +1201,7 @@ pub struct OutTAhQvar {
     #[bits(16, access = RO)]
     pub outt: u16,
 }
+
 
 /// AH/Qvar Configuration Register (R/W).
 ///
@@ -1243,6 +1248,9 @@ pub struct AhQvarCfg {
     pub ah_qvar_en: u8,
 }
 
+
+
+
 /// Self-Test Register (R/W).
 ///
 /// The `SELF_TEST` register configures the self-test procedure and disables the temperature/Qvar acquisition chain.
@@ -1272,6 +1280,8 @@ pub struct SelfTest {
     #[bits(2, access = RO)]
     not_used1: u8,
 }
+
+
 
 /// I3C Interface Control Register (R/W).
 ///
@@ -1959,6 +1969,7 @@ pub struct XlData {
     pub raw: [i16; 3],
 }
 
+
 /// Represents AH_QVAR data.
 ///
 /// # Fields
@@ -2111,6 +2122,7 @@ pub struct IntConfig {
     pub dis_rst_lir_all_int: u8,
 }
 
+
 /// Represents the configuration settings for the AH_QVAR chain.
 ///
 /// # Fields
@@ -2166,7 +2178,7 @@ pub struct SixdConfig {
 ///
 /// This struct encapsulates the configuration settings for the wakeup function, allowing customization
 /// of wake duration, sleep duration, wake threshold, and inactivity ODR.
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct WakeupConfig {
     pub wake_dur: WakeDur,
     pub sleep_dur: u8,
@@ -2289,6 +2301,7 @@ pub struct Batch {
     pub bdr_xl: BdrXl,
 }
 
+
 /// Represents the processed FIFO data.
 ///
 /// # Fields
@@ -2313,6 +2326,8 @@ pub struct FifoData {
     pub pedo: Pedo,
     pub cfg_chg: CfgChg,
 }
+
+
 
 /// Represents accelerometer data.
 ///
@@ -2362,6 +2377,7 @@ pub struct Pedo {
     pub timestamp: u32,
 }
 
+
 /// Represents configuration change data.
 ///
 /// # Fields
@@ -2392,6 +2408,8 @@ pub struct CfgChg {
     pub odr_xl_batch: u8,
     pub timestamp: u32,
 }
+
+
 
 /// Represents the bus activity selection for the I3C interface.
 ///
@@ -2438,6 +2456,7 @@ pub enum IntCfg {
     Latched = 0x2,
 }
 
+
 /// Represents the notch filter cutoff frequency options for the AH_QVAR chain.
 ///
 /// # Variants
@@ -2456,6 +2475,7 @@ pub enum AhQvarNotch {
     _50hz = 0x0,
     _60hz = 0x1,
 }
+
 
 /// Represents the input impedance options for the AH_QVAR chain.
 ///
@@ -2479,6 +2499,7 @@ pub enum AhQvarZin {
     _310mohm = 0x2,
     _75mohm = 0x3,
 }
+
 
 /// Represents the gain options for the AH_QVAR chain.
 ///
@@ -3123,6 +3144,7 @@ pub enum SpiMode {
     Spi3Wire = 0x1,
 }
 
+
 /// Represents the tags used in the FIFO sensor data.
 ///
 /// # Variants
@@ -3161,6 +3183,8 @@ pub enum FifoSensorTag {
     XlOnly2xTag2nd = 0x1E,
     XlAndQvar = 0x1F,
 }
+
+
 
 /// Represents the Free Fall threshold options.
 ///
