@@ -1178,12 +1178,12 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T> {
     pub fn pin_conf_set(&mut self, val: &PinConf) -> Result<(), Error<B::Error>> {
         let mut pin_ctrl = PinCtrl::read(self)?;
 
-        pin_ctrl.set_cs_pu_dis(!val.cs_pull_up);
-        pin_ctrl.set_pd_dis_int1(!val.int1_pull_down);
-        pin_ctrl.set_pd_dis_int2(!val.int2_pull_down);
-        pin_ctrl.set_sda_pu_en(val.sda_pull_up);
-        pin_ctrl.set_sdo_pu_en(val.sdo_pull_up);
-        pin_ctrl.set_pp_od(!val.int1_int2_push_pull);
+        pin_ctrl.set_cs_pu_dis(!val.cs_pull_up & 0x01);
+        pin_ctrl.set_pd_dis_int1(!val.int1_pull_down & 0x01);
+        pin_ctrl.set_pd_dis_int2(!val.int2_pull_down & 0x01);
+        pin_ctrl.set_sda_pu_en(val.sda_pull_up & 0x01);
+        pin_ctrl.set_sdo_pu_en(val.sdo_pull_up & 0x01);
+        pin_ctrl.set_pp_od(!val.int1_int2_push_pull & 0x01);
 
         pin_ctrl.write(self)
     }
@@ -1204,12 +1204,12 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T> {
     pub fn pin_conf_get(&mut self) -> Result<PinConf, Error<B::Error>> {
         let pin_ctrl = PinCtrl::read(self)?;
         let pin_conf = PinConf {
-            cs_pull_up: !pin_ctrl.cs_pu_dis(),
-            int1_pull_down: !pin_ctrl.pd_dis_int1(),
-            int2_pull_down: !pin_ctrl.pd_dis_int2(),
-            sda_pull_up: pin_ctrl.sda_pu_en(),
-            sdo_pull_up: pin_ctrl.sdo_pu_en(),
-            int1_int2_push_pull: !pin_ctrl.pp_od(),
+            cs_pull_up: !pin_ctrl.cs_pu_dis() & 0x01,
+            int1_pull_down: !pin_ctrl.pd_dis_int1() & 0x01,
+            int2_pull_down: !pin_ctrl.pd_dis_int2() & 0x01,
+            sda_pull_up: pin_ctrl.sda_pu_en() & 0x01,
+            sdo_pull_up: pin_ctrl.sdo_pu_en() & 0x01,
+            int1_int2_push_pull: !pin_ctrl.pp_od() & 0x01,
         };
         Ok(pin_conf)
     }
