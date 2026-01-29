@@ -1286,14 +1286,14 @@ pub struct I3cIfCtrl {
     #[bits(1)]
     pub asf_on: u8,
 
+    #[bits(1, access = RO)]
+    not_used1: u8,
+
     /// Disable Direct RSTDAA.
     ///
     /// 0: Direct RSTDAA supported; 1: Direct RSTDAA disabled.
     #[bits(1)]
     pub dis_drstdaa: u8,
-
-    #[bits(1, access = RO)]
-    not_used1: u8,
 }
 
 /// Embedded Function Status Main Page Register (R).
