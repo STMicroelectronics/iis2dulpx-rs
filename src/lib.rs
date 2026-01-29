@@ -464,6 +464,46 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T> {
         Ok(val)
     }
 
+    /// FSM capability to write CTRL regs.
+    ///
+    /// # Arguments
+    ///
+    /// - `val: u8`: Enable or disable the FSM_WR_CTRL bit
+    pub fn fsm_wr_ctrl_en_set(&mut self, val: u8) -> Result<(), Error<B::Error>> {
+        let mut func_cfg_access = if self.func_cfg_access_main.emb_func_reg_access() == 0 {
+            FuncCfgAccess::read(self)?
+        } else {
+            self.func_cfg_access_main
+        };
+
+        func_cfg_access.set_fsm_wr_ctrl_en(val & 0x1);
+        let result = func_cfg_access.write(self);
+        self.func_cfg_access_main = func_cfg_access;
+
+        result
+    }
+
+    /// FSM capability to write CTRL regs.
+    ///
+    /// # Returns
+    /// - `Result<u8, Error<B::Error>>`:
+    ///   - `u8`: Value of FSM_WR_CTRL bit.
+    ///   - `Err`: Returns an error if the operation fails. Possible error variants include:
+    ///     - `Error::Bus`: Indicates an error at the bus level.
+    ///
+    pub fn fsm_wr_ctrl_en_get(&mut self) -> Result<u8, Error<B::Error>> {
+        let func_cfg_access_main = if self.func_cfg_access_main.emb_func_reg_access() == 0 {
+            FuncCfgAccess::read(self)?
+        } else {
+            self.func_cfg_access_main
+        };
+
+        let bit = func_cfg_access_main.fsm_wr_ctrl_en();
+        self.func_cfg_access_main = func_cfg_access_main;
+
+        Ok(bit)
+    }
+
     /// Retrieves the status of the embedded functions.
     ///
     /// # Returns
