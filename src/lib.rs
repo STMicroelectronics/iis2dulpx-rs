@@ -1084,7 +1084,7 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T> {
     pub fn i3c_configure_set(&mut self, val: &I3cCfg) -> Result<(), Error<B::Error>> {
         let mut i3c_cfg = I3cIfCtrl::read(self)?;
         i3c_cfg.set_bus_act_sel(val.bus_act_sel as u8);
-        i3c_cfg.set_dis_drstdaa(val.drstdaa_en);
+        i3c_cfg.set_dis_drstdaa(val.drstdaa_dis);
         i3c_cfg.set_asf_on(val.asf_on);
         i3c_cfg.write(self)
     }
@@ -1106,7 +1106,7 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T> {
         let i3c_cfg = I3cIfCtrl::read(self)?;
 
         let val = I3cCfg {
-            drstdaa_en: i3c_cfg.dis_drstdaa(),
+            drstdaa_dis: i3c_cfg.dis_drstdaa(),
             asf_on: i3c_cfg.asf_on(),
             bus_act_sel: i3c_cfg.bus_act_sel().try_into().unwrap_or_default(),
         };
