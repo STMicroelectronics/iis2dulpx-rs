@@ -1,11 +1,11 @@
-use crate::{BusOperation, Error, MemBankFunctions, Iis2dulpx};
-use derive_more::TryFrom;
-use embedded_hal::delay::DelayNs;
-use st_mem_bank_macro::mem_bank;
-
 pub mod advanced;
 pub mod embedded;
 pub mod main;
+
+use super::{BusOperation, DelayNs, Error, Iis2dulpx, MemBankFunctions, only_async, only_sync};
+
+use derive_more::TryFrom;
+use st_mem_bank_macro::mem_bank;
 
 /// Represents the memory bank options.
 ///
@@ -26,6 +26,6 @@ pub enum MemBank {
     #[default]
     #[main]
     MainMemBank = 0x0,
-    #[state(EmbFuncBankState, fn_name = "operate_over_emb")]
+    #[state(EmbBank, fn_name = "operate_over_emb")]
     EmbedFuncMemBank = 0x1,
 }

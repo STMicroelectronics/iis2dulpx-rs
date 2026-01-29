@@ -1,4 +1,6 @@
-pub use crate::register::advanced::*;
-pub use crate::register::embedded::*;
-pub use crate::register::main::*;
-pub use crate::register::*;
+use super::register;
+
+pub use register::advanced::*;
+pub use register::embedded::*;
+pub use register::main::*;
+pub use register::*;
