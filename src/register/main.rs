@@ -2397,8 +2397,8 @@ pub struct CfgChg {
 #[derive(Clone, Copy, PartialEq, Default, TryFrom)]
 #[try_from(repr)]
 pub enum BusActSel {
-    #[default]
     _20us = 0x0,
+    #[default]
     _50us = 0x1,
     _1ms = 0x2,
     _25ms = 0x3,
