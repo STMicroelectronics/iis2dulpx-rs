@@ -354,7 +354,7 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T> {
     pub fn sw_por(&mut self) -> Result<(), Error<B::Error>> {
         self.enter_deep_power_down(1)?;
         self.reset_priv_data();
-        self.enter_deep_power_down(0)
+        self.exit_deep_power_down()
     }
 
     /// Software reset: resets configuration registers.
