@@ -22,6 +22,7 @@ pub mod register;
 pub struct Iis2dulpx<B, T> {
     pub bus: B,
     pub tim: T,
+    pub func_cfg_access_main: FuncCfgAccess,
 }
 
 /// Driver errors.
@@ -44,7 +45,11 @@ where
 {
     /// Constructor method using a generic Bus that implements BusOperation
     pub fn from_bus(bus: P, tim: T) -> Self {
-        Self { bus, tim }
+        Self {
+            bus,
+            tim,
+            func_cfg_access_main: FuncCfgAccess::new(),
+        }
     }
 }
 
@@ -57,7 +62,11 @@ where
     pub fn new_i2c(i2c: P, address: I2CAddress, tim: T) -> Self {
         // Initialize the I2C bus with the Iis2dulpx address
         let bus = st_mems_bus::i2c::I2cBus::new(i2c, address as SevenBitAddress);
-        Self { bus, tim }
+        Self {
+            bus,
+            tim,
+            func_cfg_access_main: FuncCfgAccess::new(),
+        }
     }
 }
 
@@ -70,7 +79,11 @@ where
     pub fn new_spi(spi: P, tim: T) -> Self {
         // Initialize the SPI bus
         let bus = st_mems_bus::spi::SpiBus::new(spi);
-        Self { bus, tim }
+        Self {
+            bus,
+            tim,
+            func_cfg_access_main: FuncCfgAccess::new(),
+        }
     }
 }
 
@@ -101,12 +114,15 @@ where
     /// This function changes the memory bank by modifying the `FuncCfgAccess` register. It ensures the correct
     /// memory bank is set for subsequent operations.
     fn mem_bank_set(&mut self, val: MemBank) -> Result<(), Self::Error> {
-        let mut func_cfg_access =
-            FuncCfgAccess::read(self).map_err(|_| Error::FailedToReadMemBank)?;
+        // load func_cfg_access from stored one
+        let mut func_cfg_access = self.func_cfg_access_main;
         func_cfg_access.set_emb_func_reg_access((val as u8) & 0x1);
-        func_cfg_access
+        let result = func_cfg_access
             .write(self)
-            .map_err(|_| Error::FailedToSetMembank(val))
+            .map_err(|_| Error::FailedToSetMembank(val));
+
+        self.func_cfg_access_main = func_cfg_access;
+        result
     }
 
     /// Retrieves the current memory bank.
@@ -123,8 +139,14 @@ where
     /// This function reads the `FuncCfgAccess` register to determine the current memory bank. It returns
     /// the memory bank as a `MemBank` enum.
     fn mem_bank_get(&mut self) -> Result<MemBank, Self::Error> {
-        let func_cfg_access = FuncCfgAccess::read(self)?;
-        let val = func_cfg_access
+        self.func_cfg_access_main = if self.func_cfg_access_main.emb_func_reg_access() == 0 {
+            FuncCfgAccess::read(self)?
+        } else {
+            self.func_cfg_access_main
+        };
+
+        let val = self
+            .func_cfg_access_main
             .emb_func_reg_access()
             .try_into()
             .unwrap_or_default();
@@ -282,6 +304,10 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T> {
         self.bus.write_to_register(reg, buf).map_err(Error::Bus)
     }
 
+    fn reset_priv_data(&mut self) {
+        self.func_cfg_access_main = FuncCfgAccess::new();
+    }
+
     /// Retrieves the device ID from the hardware register.
     ///
     /// # Returns
@@ -302,15 +328,86 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T> {
         Ok(arr[0])
     }
 
-    /// Configures the bus operating mode based on the initialization value provided.
+    /// Perform device reboot (boot time: 25 ms)
     ///
-    /// # Parameters
+    /// # Result
+    /// - `Result<(), Error<B::Error>>`:
+    ///     - `()`: Operation completed
+    ///     - `Err`: Returns an error if the operation fails. Possible error variants include:
+    ///         - `Error::Bus`: Indicates an error at the bus level.
+    ///         - `Error::FailedToBoot`: Indicated that the procedure did not completed
+    pub fn reboot(&mut self) -> Result<(), Error<B::Error>> {
+        let mut ctrl4 = Ctrl4::read(self)?;
+        ctrl4.set_boot(PROPERTY_ENABLE);
+        ctrl4.write(self)?;
+
+        let mut cnt = 0;
+        for _ in 0..BOOT_SWRESET_MAX_ATTEMPTS {
+            let ctrl4 = Ctrl4::read(self)?;
+            // boot procedure ended correctly
+            if ctrl4.boot() == PROPERTY_DISABLE {
+                break;
+            }
+            self.tim.delay_ms(BOOT_TIME_DELAY_MS as u32);
+            cnt += 1;
+        }
+
+        if cnt + 1 >= BOOT_SWRESET_MAX_ATTEMPTS {
+            return Err(Error::FailedToBoot);
+        }
+
+        Ok(())
+    }
+
+    /// Global reset of the device: power-on reset
     ///
-    /// - `val: Init`: Specifies the initialization mode. Possible values include:
-    ///   - `Init::Boot`: Initiates the boot procedure.
-    ///   - `Init::Reset`: Performs a software reset.
-    ///   - `Init::SensorOnlyOn`: Activates sensor-only mode without embedded functions.
-    ///   - `Init::SensorEmbFuncOn`: Activates sensor mode with embedded functions.
+    /// # Result
+    /// - `Result<(), Error<B::Error>>`:
+    ///     - `()`: Operation completed
+    ///     - `Err`: Returns an error if the operation fails. Possible error variants include:
+    ///         - `Error::Bus`: Indicates an error at the bus level.
+    pub fn sw_por(&mut self) -> Result<(), Error<B::Error>> {
+        self.enter_deep_power_down(1)?;
+        self.reset_priv_data();
+        self.enter_deep_power_down(0)
+    }
+
+    /// Software reset: resets configuration registers.
+    ///
+    /// # Result
+    /// - `Result<(), Error<B::Error>>`:
+    ///     - `()`: Operation completed
+    ///     - `Err`: Returns an error if the operation fails. Possible error variants include:
+    ///         - `Error::Bus`: Indicates an error at the bus level.
+    ///         - `Error::FailedToSwReset`: Procedure did not completed
+    pub fn sw_reset(&mut self) -> Result<(), Error<B::Error>> {
+        let mut ctrl1 = Ctrl1::read(self)?;
+        ctrl1.set_sw_reset(PROPERTY_ENABLE);
+        ctrl1.write(self)?;
+
+        let mut cnt = 0;
+        for _ in 0..BOOT_SWRESET_MAX_ATTEMPTS {
+            self.tim.delay_us(SW_RESET_DELAY_US as u32);
+
+            let status = self.status_get()?;
+
+            // sw-reset procedure ended correctly
+            if status.sw_reset == 0 {
+                break;
+            }
+
+            cnt += 1;
+        }
+
+        if cnt + 1 >= BOOT_SWRESET_MAX_ATTEMPTS {
+            return Err(Error::FailedToSwReset);
+        }
+
+        Ok(())
+    }
+
+    /// Inits the sensor with suggested parameters.
+    ///
     ///
     /// # Returns
     ///
@@ -318,83 +415,22 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T> {
     ///   - `Ok`: Indicates successful configuration.
     ///   - `Err`: Returns an error if the operation fails. Possible error variants include:
     ///     - `Error::Bus`: Indicates an error at the bus level.
-    ///     - `Error::FailedToBoot`: Indicates failure to complete the boot procedure.
-    ///     - `Error::FailedToSwReset`: Indicates failure to complete the software reset procedure.
     ///
     /// # Description
     ///
-    /// This function configures the bus operating mode by reading and writing to specific control registers
-    /// (`Ctrl1` and `Ctrl4`). Depending on the initialization mode, it performs different operations such as
-    /// booting, resetting, or configuring sensor modes. It handles errors related to bus operations and ensures
-    /// proper configuration through iterative checks and delays.
-    pub fn init_set(&mut self, val: Init) -> Result<(), Error<B::Error>> {
-        match val {
-            Init::Boot => {
-                let mut ctrl4 = Ctrl4::read(self)?;
-                ctrl4.set_boot(PROPERTY_ENABLE);
-                ctrl4.write(self)?;
+    /// BDU and IF_ADD_INC is activated by this function
+    pub fn init_set(&mut self) -> Result<(), Error<B::Error>> {
+        let mut ctrl1 = Ctrl1::read(self)?;
+        let mut ctrl4 = Ctrl4::read(self)?;
 
-                let mut cnt = 0;
-                loop {
-                    let ctrl4 = Ctrl4::read(self)?;
-                    // boot procedure ended correctly
-                    if ctrl4.boot() == PROPERTY_DISABLE {
-                        break;
-                    }
-                    self.tim.delay_ms(BOOT_TIME_DELAY_MS as u32);
-                    if cnt >= BOOT_SWRESET_MAX_ATTEMPTS {
-                        return Err(Error::FailedToBoot);
-                    }
-                    cnt += 1;
-                }
-            }
-            Init::Reset => {
-                let mut ctrl1 = Ctrl1::read(self)?;
-                ctrl1.set_sw_reset(PROPERTY_ENABLE);
-                ctrl1.write(self)?;
+        ctrl4.set_bdu(1);
+        ctrl1.set_if_add_inc(1);
 
-                let mut cnt = 0;
-                loop {
-                    self.tim.delay_us(SW_RESET_DELAY_US as u32);
+        ctrl4.write(self)?;
+        ctrl1.write(self)?;
 
-                    let status = self.status_get()?;
+        self.reset_priv_data();
 
-                    // sw-reset procedure ended correctly
-                    if status.sw_reset == 0 {
-                        break;
-                    }
-
-                    if cnt >= BOOT_SWRESET_MAX_ATTEMPTS {
-                        return Err(Error::FailedToSwReset);
-                    }
-                    cnt += 1;
-                }
-            }
-            Init::SensorOnlyOn => {
-                // No embedded functions are used
-                let mut ctrl4 = Ctrl4::read(self)?;
-                let mut ctrl1 = Ctrl1::read(self)?;
-
-                ctrl4.set_emb_func_en(PROPERTY_DISABLE);
-                ctrl4.set_bdu(PROPERTY_ENABLE);
-                ctrl1.set_if_add_inc(PROPERTY_ENABLE);
-
-                ctrl4.write(self)?;
-                ctrl1.write(self)?;
-            }
-            Init::SensorEmbFuncOn => {
-                // Complete configuration is used
-                let mut ctrl4 = Ctrl4::read(self)?;
-                let mut ctrl1 = Ctrl1::read(self)?;
-
-                ctrl4.set_emb_func_en(PROPERTY_ENABLE);
-                ctrl4.set_bdu(PROPERTY_ENABLE);
-                ctrl1.set_if_add_inc(PROPERTY_ENABLE);
-
-                ctrl4.write(self)?;
-                ctrl1.write(self)?;
-            }
-        }
         Ok(())
     }
 
