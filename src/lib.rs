@@ -1316,7 +1316,7 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T> {
     ///
     /// This function configures the routing of interrupt signals on the INT1 pin by modifying the `Ctrl1`,
     /// `Ctrl2`, and `Md1Cfg` registers.
-    pub fn pin_int1_route_set(&mut self, val: &PinIntRoute) -> Result<(), Error<B::Error>> {
+    pub fn pin_int1_route_set(&mut self, val: &PinInt1Route) -> Result<(), Error<B::Error>> {
         let mut ctrl1 = Ctrl1::read(self)?;
         ctrl1.set_int1_on_res(val.int_on_res);
         ctrl1.write(self)?;
@@ -1353,12 +1353,12 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T> {
     ///
     /// This function reads the `Ctrl1`, `Ctrl2`, and `Md1Cfg` registers to retrieve the current interrupt
     /// signals routing configuration on the INT1 pin.
-    pub fn pin_int1_route_get(&mut self) -> Result<PinIntRoute, Error<B::Error>> {
+    pub fn pin_int1_route_get(&mut self) -> Result<PinInt1Route, Error<B::Error>> {
         let ctrl1 = Ctrl1::read(self)?;
         let ctrl2 = Ctrl2::read(self)?;
         let md1_cfg = Md1Cfg::read(self)?;
 
-        Ok(PinIntRoute {
+        Ok(PinInt1Route {
             int_on_res: ctrl1.int1_on_res(),
             drdy: ctrl2.int1_drdy(),
             fifo_ovr: ctrl2.int1_fifo_ovr(),
@@ -1450,7 +1450,7 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T> {
     ///
     /// This function configures the routing of interrupt signals on the INT2 pin by modifying the `Ctrl3` and
     /// `Md2Cfg` registers.
-    pub fn pin_int2_route_set(&mut self, val: &PinIntRoute) -> Result<(), Error<B::Error>> {
+    pub fn pin_int2_route_set(&mut self, val: &PinInt2Route) -> Result<(), Error<B::Error>> {
         let mut ctrl3 = Ctrl3::read(self)?;
         ctrl3.set_int2_drdy(val.drdy);
         ctrl3.set_int2_fifo_ovr(val.fifo_ovr);
@@ -1483,11 +1483,11 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T> {
     ///
     /// This function reads the `Ctrl3` and `Md2Cfg` registers to retrieve the current interrupt signals routing
     /// configuration on the INT2 pin.
-    pub fn pin_int2_route_get(&mut self) -> Result<PinIntRoute, Error<B::Error>> {
+    pub fn pin_int2_route_get(&mut self) -> Result<PinInt2Route, Error<B::Error>> {
         let ctrl3 = Ctrl3::read(self)?;
         let md2_cfg = Md2Cfg::read(self)?;
 
-        Ok(PinIntRoute {
+        Ok(PinInt2Route {
             drdy: ctrl3.int2_drdy(),
             fifo_ovr: ctrl3.int2_fifo_ovr(),
             fifo_th: ctrl3.int2_fifo_th(),
@@ -1500,7 +1500,6 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T> {
             sleep_change: md2_cfg.int2_sleep_change(),
             emb_function: md2_cfg.int2_emb_func(),
             timestamp: md2_cfg.int2_timestamp(),
-            int_on_res: 0,
         })
     }
 

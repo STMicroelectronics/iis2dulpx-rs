@@ -2026,8 +2026,45 @@ pub struct PinConf {
 /// This struct encapsulates the interrupt signals routing configuration for the INT1 pin, allowing
 /// customization of various interrupt sources.
 #[derive(Default)]
-pub struct PinIntRoute {
+pub struct PinInt1Route {
     pub int_on_res: u8,
+    pub drdy: u8,
+    pub boot: u8,
+    pub fifo_th: u8,
+    pub fifo_ovr: u8,
+    pub fifo_full: u8,
+    pub free_fall: u8,
+    pub six_d: u8,
+    pub tap: u8,
+    pub wake_up: u8,
+    pub sleep_change: u8,
+    pub emb_function: u8,
+    pub timestamp: u8,
+}
+
+/// Represents the interrupt signals routing configuration for the INT2 pin.
+///
+/// # Fields
+///
+/// - `drdy: u8`: Data-ready interrupt.
+/// - `boot: u8`: Boot interrupt.
+/// - `fifo_th: u8`: FIFO threshold interrupt.
+/// - `fifo_ovr: u8`: FIFO overrun interrupt.
+/// - `fifo_full: u8`: FIFO full interrupt.
+/// - `free_fall: u8`: Free-fall interrupt.
+/// - `six_d: u8`: 6D orientation interrupt.
+/// - `tap: u8`: Tap interrupt.
+/// - `wake_up: u8`: Wake-up interrupt.
+/// - `sleep_change: u8`: Sleep change interrupt.
+/// - `emb_function: u8`: Embedded function interrupt.
+/// - `timestamp: u8`: Timestamp interrupt.
+///
+/// # Description
+///
+/// This struct encapsulates the interrupt signals routing configuration for the INT2 pin, allowing
+/// customization of various interrupt sources.
+#[derive(Default)]
+pub struct PinInt2Route {
     pub drdy: u8,
     pub boot: u8,
     pub fifo_th: u8,
