@@ -1109,7 +1109,7 @@ pub struct FsmOdr {
     /// Finite state machine ODR configuration.
     ///
     /// (000: 12.5 Hz; 001: 25 Hz (default); 010: 50 Hz; 011: 100 Hz; 100: 200 Hz; 101: 400 Hz; 110: 800 Hz)
-    #[bits(3)]
+    #[bits(3, default = 0b001)]
     pub fsm_odr: u8,
 
     #[bits(2, access = RO, default = 0b01)]
@@ -1134,7 +1134,7 @@ pub struct MlcOdr {
     /// Machine learning core ODR configuration.
     ///
     /// (000: 12.5 Hz; 001: 25 Hz (default); 010: 50 Hz; 011: 100 Hz; 100: 200 Hz)
-    #[bits(3)]
+    #[bits(3, default = 0b001)]
     pub mlc_odr: u8,
 
     #[bits(1, access = RO, default = 0)]
@@ -1237,8 +1237,8 @@ pub enum EmbeddedIntConfig {
 #[derive(Clone, Copy, PartialEq, Default, TryFrom)]
 #[try_from(repr)]
 pub enum FsmValOdr {
-    #[default]
     _12_5hz = 0,
+    #[default]
     _25hz = 1,
     _50hz = 2,
     _100hz = 3,
@@ -1283,8 +1283,8 @@ pub enum MlcMode {
 #[derive(Clone, Copy, PartialEq, Default, TryFrom)]
 #[try_from(repr)]
 pub enum MlcOdrVal {
-    #[default]
     _12_5hz = 0,
+    #[default]
     _25hz = 1,
     _50hz = 2,
     _100hz = 3,

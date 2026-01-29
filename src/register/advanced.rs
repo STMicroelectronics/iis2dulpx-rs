@@ -212,7 +212,7 @@ pub struct SmartPowerCtrl {
 ///
 /// This struct encapsulates the configuration settings for the smart power functionality, allowing
 /// customization of enable status, window, and duration.
-#[derive(Default)]
+#[derive(Default, Clone, Debug)]
 pub struct SmartPowerCfg {
     pub enable: u8,
     pub window: u8,

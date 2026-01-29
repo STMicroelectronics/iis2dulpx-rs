@@ -290,7 +290,7 @@ pub struct Ctrl1 {
     /// Register Address Auto-Increment.
     ///
     /// 0: Disabled; 1: Enabled (default).
-    #[bits(1)]
+    #[bits(1, default = 1)]
     pub if_add_inc: u8,
 
     /// Software Reset.
@@ -1287,7 +1287,7 @@ pub struct I3cIfCtrl {
     /// Bus Activity Selection.
     ///
     /// Selects the bus available time for in-band interrupt (IBI).
-    #[bits(2)]
+    #[bits(2, default = 0b01)]
     pub bus_act_sel: u8,
 
     #[bits(3, access = RO)]
@@ -2145,7 +2145,7 @@ pub struct AhQvarMode {
 ///
 /// This struct encapsulates the configuration settings for the 4D/6D detection function, allowing customization
 /// of the detection mode and threshold.
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct SixdConfig {
     pub threshold: Threshold,
     pub mode: Mode,
@@ -2881,7 +2881,7 @@ pub enum Init {
 ///
 /// This enum is used to specify the data-ready mode for operations involving data-ready signals.
 #[repr(u8)]
-#[derive(Clone, Copy, PartialEq, Default, TryFrom)]
+#[derive(Clone, Copy, PartialEq, Default, Debug, TryFrom)]
 #[try_from(repr)]
 pub enum DataReadyMode {
     #[default]
@@ -3095,7 +3095,7 @@ pub enum XlSelfTest {
 /// This enum is used to specify the activation level of the interrupt pin. It is used in functions
 /// that configure or retrieve the interrupt activation level.
 #[repr(u8)]
-#[derive(Clone, Copy, PartialEq, Default, TryFrom)]
+#[derive(Clone, Copy, PartialEq, Default, Debug, TryFrom)]
 #[try_from(repr)]
 pub enum IntPinPolarity {
     #[default]
