@@ -26,7 +26,7 @@ pub struct Iis2dulpx<B: BusOperation, T: DelayNs> {
 }
 
 /// Driver errors.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Error<B> {
     Bus(B), // Error at the bus level
     FailedToBoot,
@@ -388,11 +388,10 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T> {
         let mut cnt = 0;
         for _ in 0..BOOT_SWRESET_MAX_ATTEMPTS {
             self.tim.delay_us(SW_RESET_DELAY_US as u32);
-
-            let status = self.status_get()?;
+            let ctrl1 = Ctrl1::read(self)?;
 
             // sw-reset procedure ended correctly
-            if status.sw_reset == 0 {
+            if ctrl1.sw_reset() == 0 {
                 break;
             }
 
