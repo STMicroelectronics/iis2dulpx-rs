@@ -2439,8 +2439,8 @@ pub enum IntCfg {
 #[derive(Clone, Copy, PartialEq, Default, TryFrom)]
 #[try_from(repr)]
 pub enum AhQvarNotch {
-    _50hz = 0x0,
     #[default]
+    _50hz = 0x0,
     _60hz = 0x1,
 }
 
@@ -2460,10 +2460,10 @@ pub enum AhQvarNotch {
 #[derive(Clone, Copy, Default, PartialEq, TryFrom)]
 #[try_from(repr)]
 pub enum AhQvarZin {
+    #[default]
     _520mohm = 0x0,
     _175mohm = 0x1,
     _310mohm = 0x2,
-    #[default]
     _75mohm = 0x3,
 }
 
@@ -2483,10 +2483,10 @@ pub enum AhQvarZin {
 #[derive(Clone, Copy, Default, PartialEq, TryFrom)]
 #[try_from(repr)]
 pub enum AhQvarGain {
+    #[default]
     _05 = 0x0,
     _1 = 0x1,
     _2 = 0x2,
-    #[default]
     _4 = 0x3,
 }
 
@@ -2831,8 +2831,8 @@ pub enum BdrXl {
 #[try_from(repr)]
 pub enum FifoEvent {
     #[default]
-    Wtm = 0x0,
-    Full = 0x1,
+    Wtm = 0x1,
+    Full = 0x0,
 }
 
 /// Represents the initialization modes for the device.

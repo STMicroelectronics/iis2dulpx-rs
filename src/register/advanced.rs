@@ -187,17 +187,17 @@ pub struct TAhQvarSensitivity {
 #[cfg_attr(feature = "bit_order_msb", bitfield(u8, order = Msb))]
 #[cfg_attr(not(feature = "bit_order_msb"), bitfield(u8, order = Lsb))]
 pub struct SmartPowerCtrl {
-    /// Duration threshold for smart power management.
-    ///
-    /// This field sets the value of the duration threshold for the smart power management feature.
-    #[bits(4)]
-    pub smart_power_ctrl_dur: u8,
-
     /// Number of consecutive windows for smart power evaluation.
     ///
     /// This field sets the number of consecutive windows during which the smart power management feature is evaluated.
     #[bits(4)]
     pub smart_power_ctrl_win: u8,
+
+    /// Duration threshold for smart power management.
+    ///
+    /// This field sets the value of the duration threshold for the smart power management feature.
+    #[bits(4)]
+    pub smart_power_ctrl_dur: u8,
 }
 
 /// Represents the configuration settings for the smart power functionality.
