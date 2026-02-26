@@ -332,6 +332,76 @@ impl<B: BusOperation, T: DelayNs, S: BankState> SensorOperation for Iis2dulpx<B,
 }
 
 #[bisync]
+impl<B, T> Iis2dulpx<B, T, MainBank>
+where
+    B: BusOperation,
+    T: DelayNs,
+{
+    /// Switch the MemBank to `Embedded` MemBank and return a new sensor instance with the
+    /// subset of operations that can be performed on that MemBank.
+    ///
+    /// # Description
+    ///
+    /// Sensors have many registers, sometimes located in different memory banks. These
+    /// banks can be switched by using a bit. Since the address space is shared among all
+    /// memory banks, state is introduced to prevent the user from attempting incorrect access.
+    ///
+    /// If errors occur during this operation, the user should manually execute mem_bank_set
+    /// until no error occurs.
+    ///
+    /// # Returns
+    ///
+    /// - `Result<Iis2dulpx<B, T, EmbBank>, Error<B::Error>>`
+    ///     - `Iis2dulpx<B, T, EmbBank>`: The sensor in the EmbBank state
+    ///     - `Error<B::Error>`: Error during the MemBank switch
+    pub async fn switch_to_emb(mut self) -> Result<Iis2dulpx<B, T, EmbBank>, Error<B::Error>> {
+        self.mem_bank_set(MemBank::EmbedFuncMemBank).await?;
+
+        Ok(Iis2dulpx {
+            bus: self.bus,
+            tim: self.tim,
+            func_cfg_access_main: self.func_cfg_access_main,
+            _state: core::marker::PhantomData,
+        })
+    }
+}
+
+#[bisync]
+impl<B, T> Iis2dulpx<B, T, EmbBank>
+where
+    B: BusOperation,
+    T: DelayNs,
+{
+    /// Switch the MemBank to `Main` MemBank and return a new sensor instance with the
+    /// subset of operations that can be performed on that MemBank.
+    ///
+    /// # Description
+    ///
+    /// Sensors has a lot of registers and sometimes they are on different memory banks, those
+    /// banks could be switched by using a bit. Since the address space is shared between all
+    /// memory banks, state is introduced to protect user to attempt wrong access.
+    ///
+    /// If errors occurs during this operation, the user should manually execute a mem_bank_set
+    /// until no error
+    ///
+    /// # Returns
+    ///
+    /// - `Result<Iis2dulpx<B, T, MainBank>, Error<B::Error>>`
+    ///     - `Iis2dulpx<B, T, MainBank>`: The sensor in the EmbBank state
+    ///     - `Error<B::Error>`: Error during the membank switch
+    pub async fn switch_to_main(mut self) -> Result<Iis2dulpx<B, T, MainBank>, Error<B::Error>> {
+        self.mem_bank_set(MemBank::MainMemBank).await?;
+
+        Ok(Iis2dulpx {
+            bus: self.bus,
+            tim: self.tim,
+            func_cfg_access_main: self.func_cfg_access_main,
+            _state: core::marker::PhantomData,
+        })
+    }
+}
+
+#[bisync]
 impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T, MainBank> {
     fn reset_priv_data(&mut self) {
         self.func_cfg_access_main = FuncCfgAccess::new();
@@ -2265,6 +2335,9 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T, MainBank> {
 
     /// Retrieves the number of detected steps from the step counter.
     ///
+    /// If this operation is requested frequently (es. inside loops), it is better to use `switch_to_emb`
+    /// and call this API on the resulting object.
+    ///
     /// # Returns
     ///
     /// - `Result<u16, Error<B::Error>>`:
@@ -2277,9 +2350,8 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T, MainBank> {
     /// This function reads the `StepCounterL` register to retrieve the number of detected steps from the
     /// step counter.
     pub async fn stpcnt_steps_get(&mut self) -> Result<u16, Error<B::Error>> {
-        self.operate_over_emb(StepCounter::read)
+        self.operate_over_emb(async |state| state.stpcnt_steps_get().await)
             .await
-            .map(|reg| reg.step())
     }
 
     /// Resets the step counter.
@@ -2295,12 +2367,8 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T, MainBank> {
     ///
     /// This function resets the step counter by modifying the `EmbFuncSrc` register.
     pub async fn stpcnt_rst_step_set(&mut self) -> Result<(), Error<B::Error>> {
-        self.operate_over_emb(async |state| {
-            let mut emb_func_src = EmbFuncSrc::read(state).await?;
-            emb_func_src.set_pedo_rst_step(1);
-            emb_func_src.write(state).await
-        })
-        .await
+        self.operate_over_emb(async |state| state.stpcnt_rst_step_set().await)
+            .await
     }
 
     /// Configures the pedometer debounce setting.
@@ -3063,6 +3131,9 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T, MainBank> {
 
     /// Retrieves the FSM output registers.
     ///
+    /// If this operation is requested frequently (for example, inside loops), it is better to use
+    /// `switch_to_emb` and call this API on the resulting object.
+    ///
     /// # Returns
     ///
     /// - `Result<[u8; 8], Error<B::Error>>`:
@@ -3073,12 +3144,8 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T, MainBank> {
     ///
     /// This function reads the FSM output registers to retrieve the FSM output values.
     pub async fn fsm_out_get(&mut self) -> Result<[u8; 8], Error<B::Error>> {
-        self.operate_over_emb(async |state| {
-            let mut val: [u8; 8] = [0; 8];
-            FsmOuts::read_more(state, &mut val).await?;
-            Ok(val)
-        })
-        .await
+        self.operate_over_emb(async |state| state.fsm_out_get().await)
+            .await
     }
 
     /// Configures the FSM output data rate (ODR).
@@ -3415,6 +3482,9 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T, MainBank> {
 
     /// Retrieves the output values of all MLC decision trees.
     ///
+    /// If this operation is requested frequently (for example, inside loops), it is better to use
+    /// `switch_to_emb` and call this API on the resulting object.
+    ///
     /// # Returns
     ///
     /// - `Result<[u8; 4], Error<B::Error>>`:
@@ -3426,12 +3496,8 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T, MainBank> {
     ///
     /// This function reads the `MLC1_SRC` register to retrieve the output values of all MLC decision trees.
     pub async fn mlc_out_get(&mut self) -> Result<[u8; 4], Error<B::Error>> {
-        self.operate_over_emb(async |state| {
-            let mut buff: [u8; 4] = [0; 4];
-            MlcSrc::read_more(state, &mut buff).await?;
-            Ok(buff)
-        })
-        .await
+        self.operate_over_emb(async |state| state.mlc_out_get().await)
+            .await
     }
 
     /// Configures the Machine Learning Core (MLC) data rate.
@@ -3530,6 +3596,79 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T, MainBank> {
         self.operate_over_emb(EmbFuncFifoEn::read)
             .await
             .map(|reg| reg.mlc_fifo_en())
+    }
+}
+
+#[bisync]
+impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T, EmbBank> {
+    /// Retrieves the number of detected steps from the step counter.
+    ///
+    /// # Returns
+    ///
+    /// - `Result<u16, Error<B::Error>>`:
+    ///   - `u16`: The number of detected steps.
+    ///   - `Err`: Returns an error if the operation fails. Possible error variants include:
+    ///     - `Error::Bus`: Indicates an error at the bus level.
+    ///
+    /// # Description
+    ///
+    /// This function reads the `StepCounterL` register to retrieve the number of detected steps from the
+    /// step counter.
+    pub async fn stpcnt_steps_get(&mut self) -> Result<u16, Error<B::Error>> {
+        StepCounter::read(self).await.map(|reg| reg.step())
+    }
+
+    /// Resets the step counter.
+    ///
+    /// # Returns
+    ///
+    /// - `Result<(), Error<B::Error>>`:
+    ///   - `Ok`: Indicates successful reset of the step counter.
+    ///   - `Err`: Returns an error if the operation fails. Possible error variants include:
+    ///     - `Error::Bus`: Indicates an error at the bus level.
+    ///
+    /// # Description
+    ///
+    /// This function resets the step counter by modifying the `EmbFuncSrc` register.
+    pub async fn stpcnt_rst_step_set(&mut self) -> Result<(), Error<B::Error>> {
+        let mut emb_func_src = EmbFuncSrc::read(self).await?;
+        emb_func_src.set_pedo_rst_step(1);
+        emb_func_src.write(self).await
+    }
+
+    /// Retrieves the output values of all MLC decision trees.
+    ///
+    /// # Returns
+    ///
+    /// - `Result<[u8; 4], Error<B::Error>>`:
+    ///   - `[u8; 4]`: The output values of all MLC decision trees.
+    ///   - `Err`: Returns an error if the operation fails. Possible error variants include:
+    ///     - `Error::Bus`: Indicates an error at the bus level.
+    ///
+    /// # Description
+    ///
+    /// This function reads the `MLC1_SRC` register to retrieve the output values of all MLC decision trees.
+    pub async fn mlc_out_get(&mut self) -> Result<[u8; 4], Error<B::Error>> {
+        let mut buff: [u8; 4] = [0; 4];
+        MlcSrc::read_more(self, &mut buff).await?;
+        Ok(buff)
+    }
+
+    /// Retrieves the FSM output registers.
+    ///
+    /// # Returns
+    ///
+    /// - `Result<[u8; 8], Error<B::Error>>`:
+    ///   - `[u8; 8]`: The FSM output values from the `FSM_OUTS1` to `FSM_OUTS16` registers.
+    ///   - `Err`: Returns an error if the operation fails.
+    ///
+    /// # Description
+    ///
+    /// This function reads the FSM output registers to retrieve the FSM output values.
+    pub async fn fsm_out_get(&mut self) -> Result<[u8; 8], Error<B::Error>> {
+        let mut val: [u8; 8] = [0; 8];
+        FsmOuts::read_more(self, &mut val).await?;
+        Ok(val)
     }
 }
 
