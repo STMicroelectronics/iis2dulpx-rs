@@ -530,6 +530,40 @@ impl<B: BusOperation, T: DelayNs> Iis2dulpx<B, T, MainBank> {
         Ok(())
     }
 
+    /// Enables embedded functions
+    ///
+    /// # Returns
+    ///
+    /// - `Result<(), Error<B::Error>>`:
+    ///   - `Ok`: Indicates successful configuration.
+    ///   - `Err`: Returns an error if the operation fails. Possible error variants include:
+    ///     - `Error::Bus`: Indicates an error at the bus level.
+    ///
+    /// # Description
+    ///
+    /// To be set to 1 before configuring the embedded functions. Default value: 0
+    pub async fn embedded_state_set(&mut self, value: u8) -> Result<(), Error<B::Error>> {
+        let mut ctrl4 = Ctrl4::read(self).await?;
+        ctrl4.set_emb_func_en(value);
+        ctrl4.write(self).await
+    }
+
+    /// Get configuration of embedded functions
+    ///
+    /// # Returns
+    ///
+    /// - `Result<u8, Error<B::Error>>`:
+    ///   - `Ok`: 1 if embedded functions are active
+    ///   - `Err`: Returns an error if the operation fails. Possible error variants include:
+    ///     - `Error::Bus`: Indicates an error at the bus level.
+    ///
+    /// # Description
+    ///
+    /// To be set to 1 before configuring the embedded functions. Default value: 0
+    pub async fn embedded_state_get(&mut self) -> Result<u8, Error<B::Error>> {
+        Ctrl4::read(self).await.map(|reg| reg.emb_func_en())
+    }
+
     /// Retrieves the current status of the device.
     ///
     /// # Returns
