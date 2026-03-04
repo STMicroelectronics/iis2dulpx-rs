@@ -90,6 +90,16 @@ if whoami != ID {
     panic!("Invalid sensor ID");
 }
 ```
+### Examples Location
+
+Examples are organized in the bsp folder as separate Rust binaries. This structure abstracts board-specific details, enabling board generalization while keeping the examples unchanged.
+
+Currently, the supported board and frameworks are:
+
+- **nucleo-f401re** — built on the stm32-rs framework, using a blocking implementation.
+- **nucleo-f401re-embassy** — uses the embassy asynchronous framework..
+
+More details and instructions are available in [bsp/README.md](https://github.com/STMicroelectronics/iis2dulpx-rs/blob/main/bsp/README.md).
 
 ### Configure
 
