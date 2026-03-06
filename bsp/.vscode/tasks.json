@@ -1,0 +1,58 @@
+{
+    "version": "2.0.0",
+    "inputs": [
+        {
+            "id": "board",
+            "type": "pickString",
+            "description": "Select the board configuration",
+            "options": [
+                "nucleo-f401re-embassy",
+                "nucleo-f401re"
+            ],
+            "default": "nucleo-f401re-embassy"
+        },
+        {
+            "id": "example",
+            "type": "pickString",
+            "description": "Select the example to run",
+            "options": [
+                "fifo_irq",
+                "free_fall",
+                "fsm_fourd",
+                "mlc_vibration",
+                "pedometer",
+                "pedometer_fifo",
+                "qvar",
+                "read_irq",
+                "read_polling",
+                "self_test",
+                "sixd_position",
+                "tap",
+                "tilt",
+                "wakeup"
+            ],
+            "default": "read_polling"
+        }
+    ],
+    "tasks": [
+        {
+            "label": "Cargo Build (Interactive)",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "build",
+                "--target",
+                "thumbv7em-none-eabihf",
+                "--features",
+                "${input:board},${input:example}"
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ]
+}
