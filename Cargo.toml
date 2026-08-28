@@ -29,6 +29,9 @@ version = "2.0.1"
 features = ["try_from"]
 default-features = false
 
+[patch.crates-io]
+bisync = { path = "vendor/bisync" }
+
 # Features
 # --------
 # - By default the async API is enabled via the `async` feature.
